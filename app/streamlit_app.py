@@ -9,6 +9,39 @@ from resume_ranker.pipeline import rank
 from resume_ranker.config import Config, Weights
 
 st.set_page_config(page_title="Resume Ranker", layout="wide")
+# --- Reset hook (token-protected) --------------------------------------------
+import os, shutil
+import streamlit as st
+
+def _get_query_params():
+    # works on older/newer Streamlit
+    try:
+        return st.query_params  # type: ignore[attr-defined]
+    except Exception:
+        return st.experimental_get_query_params()
+
+params = _get_query_params()
+reset_flag  = (params.get("reset", ["0"])[0] == "1")
+reset_token = params.get("token", [""])[0]
+allow_token = st.secrets.get("RESET_TOKEN", "")
+
+if reset_flag and allow_token and reset_token == allow_token:
+    # Clear Streamlit caches (fast and safe)
+    st.cache_data.clear()
+    st.cache_resource.clear()
+
+    # Optional: add &wipe_db=1 to also delete the local SQLite file
+    if params.get("wipe_db", ["0"])[0] == "1":
+        try:
+            if os.path.exists("app_data.db"):
+                os.remove("app_data.db")
+            shutil.rmtree(".streamlit_tmp", ignore_errors=True)
+        except Exception:
+            pass
+
+    st.write("✅ Reset completed.")
+    st.stop()
+
 st.markdown('<h1 class="page-title">Resume Ranker</h1>', unsafe_allow_html=True)
 
 
